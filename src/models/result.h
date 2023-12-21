@@ -1,7 +1,7 @@
-#include <sys/time.h>
+    #include <sys/time.h>
 
-typedef struct Result {
-    struct timeval *start;
-    struct timeval *end;
-    double elapsed;
-} Result;
+    typedef struct Result {
+        struct timeval *start;
+        struct timeval *end;
+        double elapsed;
+    } Result;

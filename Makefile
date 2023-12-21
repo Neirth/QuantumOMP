@@ -5,18 +5,18 @@ ICX_COMPILER = icx
 SEQ_COMPILER = gcc
 
 # Common Flags
-CC_FLAGS     = -std=c99 -O3 -fPIC
+CC_FLAGS     = -O3 -march=native -std=c99  -ldl -ggdb -Wall -Wextra -Wpedantic -fPIC -Isrc -Wunknown-pragmas
 
 # Compiler Specific Flags
 NVC_FLAGS    = -mp=gpu -Minfo=mp -gpu=cc61
 GCC_FLAGS    = -fopenmp
-ICX_FLAGS    = -qopenmp
+ICX_FLAGS    = -ipo -xalderlake -qopt-zmm-usage=high -funroll-loops -qopenmp
 SEQ_FLAGS    =
 
 # Targets
 all: dijkstra_algorithm mandelbrot_algorithm compute_algorithms
-dijkstra_algorithm: libdijkstra_intel.so libdijkstra_unix.so libdijkstra_sequential.so libdijkstra_nvidia.so
-mandelbrot_algorithm: libmandelbrot_intel.so libmandelbrot_unix.so libmandelbrot_sequential.so libmandelbrot_nvidia.so
+dijkstra_algorithm: libdijkstra_intel.so libdijkstra_unix.so libdijkstra_sequential.so
+mandelbrot_algorithm: libmandelbrot_intel.so libmandelbrot_unix.so libmandelbrot_sequential.so
 
 # Optional operations
 clean:

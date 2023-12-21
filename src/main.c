@@ -3,6 +3,9 @@
 #include <malloc.h>
 #include "models/result.h"
 
+#define TOTAL_ALGORITHMS 2
+#define TOTAL_RUNTIMES 3
+
 Result (*runTest)(void);
 
 char *formatFilename(char *algorithm, char *runtime) {
@@ -21,28 +24,22 @@ void runAndTestAlgorithm(char *algorithm, char *runtime) {
 
     *(void**)(&runTest) = dlsym(openResult, "runTest");
 
-    Result result = (Result) runTest();
+    Result result = runTest();
 
-    printf("| %-10s | %-10s | %-10d | %-10d | %-10g |\n", algorithm, runtime, result.start, result.end, result.elapsed);
-
-    int closeResult = dlclose(openResult);
-
-    if (closeResult != 0) {
-        printf("Error: %s\n", dlerror());
-    }
+    printf("| %-10s | %-10s | %-10ld | %-10ld | %-10g |\n", algorithm, runtime, result.start->tv_sec, result.end->tv_sec, result.elapsed);
 }
 
 int main() {
-    char *algorithm[2] = {"mandelbrot", "dijkstra"};
-    char *runtime[4] = {"sequential", "intel", "nvidia", "unix"};
+    char *algorithm[TOTAL_ALGORITHMS] = {"mandelbrot", "dijkstra"};
+    char *runtime[TOTAL_RUNTIMES] = {"intel", "unix", "sequential"};
 
     printf("------------------------------------------------------------------\n");
     printf("| %-10s | %-10s | %-10s | %-10s | %-10s |\n", "Algorithm", "Runtime", "Start", "End", "Elapsed");
 
-    for (int i = 0; i < 2; i++) {
+    for (int i = 0; i < TOTAL_ALGORITHMS; i++) {
         printf("------------------------------------------------------------------\n");
 
-        for (int j = 0; j < 4; j++) {
+        for (int j = 0; j < TOTAL_RUNTIMES; j++) {
             runAndTestAlgorithm(algorithm[i], runtime[j]);
         }
     }

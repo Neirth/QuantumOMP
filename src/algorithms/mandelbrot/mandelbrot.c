@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdbool.h>
 #include <sys/time.h>
 
 #ifdef _OPENMP
@@ -13,24 +14,41 @@ int mandelbrot(double real, double imag, int max_iter) {
     int iter;
     double r = real;
     double i = imag;
+    int result = max_iter;
+    int terminate = false;
 
+    #pragma omp parallel for default(none) shared(r, i, max_iter, real, imag, result, terminate) private(iter)
     for (iter = 0; iter < max_iter; ++iter) {
-        double r2 = r * r;
-        double i2 = i * i;
+        if (!terminate) {
+            double r2 = r * r;
+            double i2 = i * i;
 
-        if (r2 + i2 > 4.0) {
-            return iter;
+
+            if (r2 + i2 > 4.0) {
+                {
+                    // Actualizar el resultado solo si no ha sido actualizado por otro hilo
+                    if (result == max_iter) {
+                        result = iter;
+                    }
+                }
+                // Salir del bucle una vez que la condición se ha cumplido
+                terminate = true;
+            }
+
+            i = 2 * r * i + imag;
+            r = r2 - i2 + real;
+        } else {
+            #ifndef _OPENMP
+                break;
+            #endif
         }
-
-        i = 2 * r * i + imag;
-        r = r2 - i2 + real;
     }
 
-    return max_iter;
+    return result;
 }
 
 void mandelbrot_set(int width, int height, double xmin, double xmax, double ymin, double ymax, int max_iter, int *output) {
-    #pragma omp parallel for collapse(2)
+    #pragma omp parallel for collapse(2) default(none) shared(width, height, xmin, xmax, ymin, ymax, max_iter, output)
     for (int y = 0; y < height; ++y) {
         for (int x = 0; x < width; ++x) {
             double real = xmin + x * (xmax - xmin) / (width - 1);
@@ -41,9 +59,9 @@ void mandelbrot_set(int width, int height, double xmin, double xmax, double ymin
     }
 }
 
-Result runTest() {
-    int width = 800;
-    int height = 600;
+Result runTest(void) {
+    int width = 1920;
+    int height = 1080;
     double xmin = -2.0;
     double xmax = 1.0;
     double ymin = -1.5;
@@ -60,6 +78,7 @@ Result runTest() {
     mandelbrot_set(width, height, xmin, xmax, ymin, ymax, max_iter, output);
 
     gettimeofday(&end, NULL);
+
 
     free(output);
 

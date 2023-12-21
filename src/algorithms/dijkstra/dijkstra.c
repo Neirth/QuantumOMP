@@ -2,24 +2,16 @@
     #include <omp.h>
 #endif
 
-#include <stdio.h>
+#include <stdlib.h>
 #include <float.h>
 #include <sys/time.h>
 
 #include "../../models/result.h"
 #include "../../utils/timeDiff.h"
 
-int global_gid = 0;
+#define MATRIX_SIZE 4096
 
-void initialize_algorithm_buffers(float *result, float *distance, int *visited, float *vertex, float *vertex_temp, int vertex_count) {
-    int gid;
-
-    #ifdef _OPENMP
-        gid = omp_get_thread_num();
-    #else
-        gid = global_gid;
-    #endif
-
+void initialize_algorithm_buffers(int gid, float *result, float *distance, int *visited, float *vertex, float *vertex_temp) {
     if (gid == 0) {
         visited[gid] = 1;
         result[gid] = 0;
@@ -33,18 +25,11 @@ void initialize_algorithm_buffers(float *result, float *distance, int *visited, 
     vertex_temp[gid] = 0;
 }
 
-void shortest_path_algorithm(float *result, float *matrix_row, float *distance, int *visited, float *vertex_temp, int vertex_count) {
-    int gid;
-
-    #ifdef _OPENMP
-        gid = omp_get_thread_num();
-    #else
-        gid = global_gid;
-    #endif
-
+void shortest_path_algorithm(int gid, const float *result, const float *matrix_row, float *distance, int *visited, float *vertex_temp, int vertex_count) {
     if (visited[gid] != 1) {
         visited[gid] = 1;
 
+        #pragma omp parallel for
         for (int edge = 0; edge < vertex_count; edge++) {
             float weight = matrix_row[edge];
 
@@ -53,22 +38,14 @@ void shortest_path_algorithm(float *result, float *matrix_row, float *distance, 
 
                 if (distance[gid] == 0.0 || result[gid] > dist) {
                     distance[gid] = dist;
-                    vertex_temp[gid] = edge;
+                    vertex_temp[gid] = (float) edge;
                 }
             }
         }
     }
 }
 
-void merge_sortest_path(float *result, float *distance, int *visited, float *vertex, float *vertex_temp, int vertex_count) {
-    int gid;
-
-    #ifdef _OPENMP
-        gid = omp_get_thread_num();
-    #else
-        gid = global_gid;
-    #endif
-
+void merge_sortest_path(int gid, float *result, const float *distance, int *visited, float *vertex, const float *vertex_temp) {
     if (result[gid] > distance[gid]) {
         result[gid] = distance[gid];
         vertex[gid] = vertex_temp[gid];
@@ -79,66 +56,70 @@ void merge_sortest_path(float *result, float *distance, int *visited, float *ver
     }
 }
 
-Result runTest() {
+float** generateMatrix(void) {
+    float** matrix = (float**)malloc(MATRIX_SIZE * sizeof(float*));
+
+    #pragma omp parallel default(none) shared(matrix)
+    {
+        #pragma omp for
+        for (int i = 0; i < MATRIX_SIZE; i++) {
+            matrix[i] = (float*)malloc(MATRIX_SIZE * sizeof(float));
+        }
+
+        #pragma omp for collapse(2)
+        for (int i = 0; i < MATRIX_SIZE; i++) {
+            for (int j = 0; j < MATRIX_SIZE; j++) {
+                matrix[i][j] = ((float)rand() / RAND_MAX);
+            }
+        }
+    }
+
+    return matrix;
+}
+
+
+Result runTest(void) {
     struct timeval start;
     struct timeval end;
 
-    gettimeofday(&start, NULL);
-
     // Matrix size
-    int matrix_size = 6;
+    int matrix_size = MATRIX_SIZE;
 
     // Matrix representation (replace with your actual data)
-    float matrix[6][6] = {
-            {01.0, 04.0, 02.0, 00.0, 00.0, 00.0},
-            {04.0, 01.0, 01.0, 05.0, 00.0, 00.0},
-            {02.0, 01.0, 01.0, 08.0, 10.0, 00.0},
-            {00.0, 05.0, 08.0, 01.0, 02.0, 06.0},
-            {00.0, 00.0, 10.0, 02.0, 01.0, 02.0},
-            {00.0, 00.0, 00.0, 06.0, 02.0, 01.0}
-    };
+    float** matrix = generateMatrix();
 
     // Result, distance, vertex, vertex_temp, visited arrays
-    float result[matrix_size];
-    float distance[matrix_size];
-    float vertex[matrix_size];
-    float vertex_temp[matrix_size];
-    int visited[matrix_size];
+    float result[MATRIX_SIZE];
+    float distance[MATRIX_SIZE];
+    float vertex[MATRIX_SIZE];
+    float vertex_temp[MATRIX_SIZE];
+    int visited[MATRIX_SIZE];
 
-    // Parallel initialization of buffers
-    #pragma omp parallel for
-    for (int i = 0; i < matrix_size; i++) {
-        #ifndef _OPENMP
-            global_gid = i;
-        #endif
+    gettimeofday(&start, NULL);
 
-        #pragma omp task
-        initialize_algorithm_buffers(result, distance, visited, vertex, vertex_temp, matrix_size);
+
+    #pragma omp parallel for default(none) shared(result, distance, visited, vertex, vertex_temp)
+    for (int i = 0; i < MATRIX_SIZE; i++) {
+        initialize_algorithm_buffers(i, result, distance, visited, vertex, vertex_temp);
     }
 
-    // Parallel shortest path algorithm
-    #pragma omp parallel for
-    for (int i = 0; i < matrix_size; i++) {
-        #ifndef _OPENMP
-            global_gid = i;
-        #endif
-
-        #pragma omp task
-        shortest_path_algorithm(result, matrix[i], distance, visited, vertex_temp, matrix_size);
+    #pragma omp parallel for default(none) shared(result, distance, visited, vertex, vertex_temp, matrix, matrix_size)
+    for (int i = 0; i < MATRIX_SIZE; i++) {
+        shortest_path_algorithm(i, result, matrix[i], distance, visited, vertex_temp, MATRIX_SIZE);
     }
 
-    // Parallel merge the shortest path
-    #pragma omp parallel for
+    #pragma omp parallel for default(none) shared(result, distance, visited, vertex, vertex_temp, matrix, matrix_size)
     for (int i = 0; i < matrix_size; i++) {
-        #ifndef _OPENMP
-            global_gid = i;
-        #endif
-
-        #pragma omp task
-        merge_sortest_path(result, distance, visited, vertex, vertex_temp, matrix_size);
+        merge_sortest_path(i, result, distance, visited, vertex, vertex_temp);
     }
 
     gettimeofday(&end, NULL);
+
+    for (int i = 0; i < MATRIX_SIZE; i++) {
+        free(matrix[i]);
+    }
+
+    free(matrix);
 
     return (Result) {
         .start = &start,
