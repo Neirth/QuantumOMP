@@ -8,7 +8,7 @@ SEQ_COMPILER = gcc
 CC_FLAGS     = -O3 -std=c99 -ldl -Wall -Wextra -Wpedantic -fPIC -Isrc
 
 # Compiler Specific Flags
-NVC_FLAGS    = -mp=gpu -Minfo=mp -gpu=ccnative
+NVC_FLAGS    = -mp=gpu -Minfo=mp -gpu=ccnative,fastmath -restrict -ftree-vectorize
 GCC_FLAGS    = -march=native -ggdb -fopenmp
 ICX_FLAGS    = -march=native -ggdb -ipo -qopt-zmm-usage=high -funroll-loops -qopenmp
 SEQ_FLAGS    = -march=native -ggdb
