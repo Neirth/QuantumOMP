@@ -17,7 +17,6 @@ int mandelbrot(double real, double imag, int max_iter) {
     int result = max_iter;
     int terminate = false;
 
-    #pragma omp simd reduction(min:result)
     for (iter = 0; iter < max_iter; ++iter) {
         if (!terminate) {
             double r2 = r * r;
@@ -36,10 +35,6 @@ int mandelbrot(double real, double imag, int max_iter) {
 
             i = 2 * r * i + imag;
             r = r2 - i2 + real;
-        } else {
-            #ifndef _OPENMP
-                break;
-            #endif
         }
     }
 
@@ -47,8 +42,8 @@ int mandelbrot(double real, double imag, int max_iter) {
 }
 
 Result runTest(void) {
-    int width = 3840;
-    int height = 2160;
+    int width = 1920;
+    int height = 1080;
     double xmin = -2.0;
     double xmax = 1.0;
     double ymin = -1.5;
@@ -62,19 +57,17 @@ Result runTest(void) {
 
     gettimeofday(&start, NULL);
 
-    #pragma omp parallel
-    {
-        #pragma omp for collapse(2) schedule(dynamic)
-        for (int y = 0; y < height; ++y) {
-            for (int x = 0; x < width; ++x) {
-                double real = xmin + x * (xmax - xmin) / (width - 1);
-                double imag = ymin + y * (ymax - ymin) / (height - 1);
+    #pragma omp parallel for collapse(2) schedule(dynamic)
+    for (int y = 0; y < height; ++y) {
+        for (int x = 0; x < width; ++x) {
+            double real = xmin + x * (xmax - xmin) / (width - 1);
+            double imag = ymin + y * (ymax - ymin) / (height - 1);
 
-            
-                output[y * width + x] = mandelbrot(real, imag, max_iter);
-            }
+        
+            output[y * width + x] = mandelbrot(real, imag, max_iter);
         }
     }
+    
 
     gettimeofday(&end, NULL);
 
