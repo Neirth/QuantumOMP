@@ -62,8 +62,6 @@ Result runTest(void) {
 
     gettimeofday(&start, NULL);
 
-    mandelbrot_set(width, height, xmin, xmax, ymin, ymax, max_iter, output);
-
     #pragma omp parallel
     {
         #pragma omp for collapse(2) schedule(dynamic)
