@@ -17,6 +17,7 @@ int mandelbrot(double real, double imag, int max_iter) {
     int result = max_iter;
     int terminate = false;
 
+    #pragma omp simd reduction(min:result)
     for (iter = 0; iter < max_iter; ++iter) {
         if (!terminate) {
             double r2 = r * r;
