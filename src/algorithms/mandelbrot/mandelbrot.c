@@ -23,7 +23,6 @@ int mandelbrot(double real, double imag, int max_iter) {
             double r2 = r * r;
             double i2 = i * i;
 
-
             if (r2 + i2 > 4.0) {
                 {
                     // Actualizar el resultado solo si no ha sido actualizado por otro hilo
@@ -60,8 +59,8 @@ void mandelbrot_set(int width, int height, double xmin, double xmax, double ymin
 }
 
 Result runTest(void) {
-    int width = 1920;
-    int height = 1080;
+    int width = 3840;
+    int height = 2160;
     double xmin = -2.0;
     double xmax = 1.0;
     double ymin = -1.5;
