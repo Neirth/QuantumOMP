@@ -4,7 +4,7 @@
 #include "models/result.h"
 
 #define TOTAL_ALGORITHMS 2
-#define TOTAL_RUNTIMES 3
+#define TOTAL_RUNTIMES 4
 
 Result (*runTest)(void);
 
@@ -31,7 +31,7 @@ void runAndTestAlgorithm(char *algorithm, char *runtime) {
 
 int main() {
     char *algorithm[TOTAL_ALGORITHMS] = {"mandelbrot", "dijkstra"};
-    char *runtime[TOTAL_RUNTIMES] = {"intel", "unix", "sequential"};
+    char *runtime[TOTAL_RUNTIMES] = {"nvidia", "intel", "unix", "sequential"};
 
     printf("------------------------------------------------------------------\n");
     printf("| %-10s | %-10s | %-10s | %-10s | %-10s |\n", "Algorithm", "Runtime", "Start", "End", "Elapsed");
